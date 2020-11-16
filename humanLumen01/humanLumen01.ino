@@ -63,8 +63,6 @@ TFmini tfmini;
 
 HumanDetector detector;
 Fader fadeOff;
-Fader fader1;
-Fader fader2;
 
 ////////////////////////////////////////////////
 ////////////////////////////////////////////////
@@ -92,10 +90,10 @@ void setup() {
       delay(500);
     }
   }
-  mixerL.gain(0, .0); // track 1 L
-  mixerL.gain(1, 0); // track 2 L
-  mixerR.gain(0, 0); // track 1 R
-  mixerR.gain(1, 0.0); // track 2 R
+  mixerL.gain(0, .5); // track 1 L
+  mixerL.gain(1, .5); // track 2 L
+  mixerR.gain(0, .5); // track 1 R
+  mixerR.gain(1, .5); // track 2 R
 
 
   // SD Card
@@ -117,8 +115,6 @@ void setup() {
   Serial.println("go to main");
 
   fadeOff = Fader();
-  fader1 = Fader();
-  fader2 = Fader();
 }
 
 //////////////////////////////////////
@@ -127,14 +123,6 @@ void setup() {
 //////////////////////////////////////
 //////////////////////////////////////
 void loop() {
-
-  if (!playWav1.isPlaying()) {
-    playFile1();
-  }
-  if (!playWav2.isPlaying()) {
-    playFile2();
-  }
-  
   if (tfmini.available())
   {
     bool stateChanged = detector.checkIt();
@@ -142,6 +130,13 @@ void loop() {
       Serial.print("new state: ");
       if (detector.state == NOPE) {
         fadeOff.startFadeOff(2000);
+        Serial.println("NOPE");
+        if (playWav1.isPlaying()) {
+          playWav1.stop();
+        }
+        if (playWav2.isPlaying()) {
+          playWav2.stop();
+        }
       }
       else if (detector.state == DISTANT) {
         Serial.println("DISTANT");
@@ -163,11 +158,11 @@ void loop() {
       }
     }
   }
-
-  //  if(fadeOff.fadeTimerActive){
-  //    fadeOff.updateFade();
-  //  }
-
+  
+//  if(fadeOff.fadeTimerActive){
+//    fadeOff.updateFade();  
+//  }
+  
   // light animations...
   if (detector.state == UPCLOSE) {
     // pixels2 crazy time

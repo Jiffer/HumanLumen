@@ -34,6 +34,10 @@ AudioControlSGTL5000     sgtl5000_1;     //xy=240,425
 #define SDCARD_MOSI_PIN  7
 #define SDCARD_SCK_PIN   14
 
+int fadeOnTime = 3000;
+int fadeOffTime = 3000;
+unsigned long printTimer = 0;
+
 ///////////////////////////////////////////
 // LED setup
 ///////////////////////////////////////////
@@ -92,10 +96,10 @@ void setup() {
       delay(500);
     }
   }
-  mixerL.gain(0, .0); // track 1 L
+  mixerL.gain(0, 0); // track 1 L
   mixerL.gain(1, 0); // track 2 L
   mixerR.gain(0, 0); // track 1 R
-  mixerR.gain(1, 0.0); // track 2 R
+  mixerR.gain(1, 0); // track 2 R
 
 
   // SD Card
@@ -134,70 +138,95 @@ void loop() {
   if (!playWav2.isPlaying()) {
     playFile2();
   }
-  
+
   if (tfmini.available())
   {
     bool stateChanged = detector.checkIt();
     if (stateChanged) {
       Serial.print("new state: ");
       if (detector.state == NOPE) {
-        fadeOff.startFadeOff(2000);
+        if (fader1.fadeLevel > 0) {
+          fader1.startFadeOff(fadeOffTime);
+        }
+        if (fader2.fadeLevel > 0) {
+          fader2.startFadeOff(fadeOffTime);
+        }
       }
       else if (detector.state == DISTANT) {
         Serial.println("DISTANT");
-        if (playWav2.isPlaying()) {
-          playWav2.stop();
+        if (fader1.fadeLevel < fader1.maxLevel) {
+          fader1.startFadeOn(fadeOnTime);
         }
-        if (!playWav1.isPlaying()) {
-          playFile1();
+        if (fader2.fadeLevel > 0) {
+          fader2.startFadeOff(fadeOffTime);
         }
       }
       else if (detector.state == UPCLOSE) {
         Serial.println("UPCLOSE");
-        if (!playWav1.isPlaying()) {
-          playFile1();
+        if (fader1.fadeLevel < fader1.maxLevel) {
+          fader1.startFadeOn(fadeOnTime);
         }
-        if (!playWav2.isPlaying()) {
-          playFile2();
+        if (fader2.fadeLevel < fader1.maxLevel) {
+          fader2.startFadeOn(fadeOnTime);
         }
       }
     }
   }
+  if (fader1.fadeState == FADE_ON) {
+    fader1.updateFadeOn();
+  } else if (fader1.fadeState == FADE_OFF) {
+    fader1.updateFadeOff();
+  }
+  if (fader2.fadeState == FADE_ON) {
+    fader2.updateFadeOn();
+  } else if (fader2.fadeState == FADE_OFF) {
+    fader2.updateFadeOff();
+  }
+  if (millis() > printTimer) {
+    Serial.print("f1: "); Serial.println(fader1.fadeLevel);
+    Serial.println(fader2.fadeLevel);
+    printTimer = millis() + 200;
+  }
+
+  mixerL.gain(0, fader1.fadeLevel); // track 1 L
+  mixerL.gain(1, fader2.fadeLevel); // track 2 L
+  mixerR.gain(0, fader1.fadeLevel); // track 1 R
+  mixerR.gain(1, fader2.fadeLevel); // track 2 R
 
   //  if(fadeOff.fadeTimerActive){
   //    fadeOff.updateFade();
   //  }
 
   // light animations...
-  if (detector.state == UPCLOSE) {
-    // pixels2 crazy time
-    unsigned long currentTime = millis();
-    for (int i = NUM_RED; i < NUM_LAUGH + NUM_RED; i++) {
-      // Set the i'th led to red
-      if (random(100) < 3) {
-        int randomColor = random(255);
-        leds[i] = CHSV(randomColor, random(255), random(255));
-      }
+  //  if (detector.state == UPCLOSE) {
+  // pixels2 crazy time
+  unsigned long currentTime = millis();
+  for (int i = NUM_RED; i < NUM_LAUGH + NUM_RED; i++) {
+    // Set the i'th led to red
+    if (random(100) < 3) {
+
+      leds[i] = CHSV(fader2.fadeLevel * random(255), fader2.fadeLevel * random(255), fader2.fadeLevel * random(255));
     }
-    FastLED.show();
   }
-  if (detector.state == DISTANT || detector.state == UPCLOSE) {
-    unsigned long currentTime = millis();
-    for (int i = 0; i < NUM_RED; i++) {
-      // Set the i'th led to red
-      redBrightness = 155 + 65 * sin((currentTime + i * 5) * 2 * PI / 10000) + 35 * sin((currentTime + i * 5) * 2 * PI / 1200);
-      leds[i] = CHSV(100, 255, redBrightness);
-    }
-    FastLED.show();
+  FastLED.show();
+  //  }
+  //  if (detector.state == DISTANT || detector.state == UPCLOSE) {
+  currentTime = millis();
+  for (int i = 0; i < NUM_RED; i++) {
+    // Set the i'th led to red
+    redBrightness = 155 + 65 * sin((currentTime + i * 5) * 2 * PI / 10000) + 35 * sin((currentTime + i * 5) * 2 * PI / 1200);
+    leds[i] = CHSV(100, 255, fader1.fadeLevel * redBrightness);
   }
-  if (detector.state == NOPE) {
-    unsigned long currentTime = millis();
-    for (int i = 0; i < NUM_LAUGH + NUM_RED; i++) {
-      // Set the i'th led to red
-      if (random(100) < 5) {
-        leds[i] = CHSV(0, 0, 0);
-      }
-    }
-    FastLED.show();
-  }
+  FastLED.show();
+  // }
+  //  if (detector.state == NOPE) {
+  //    unsigned long currentTime = millis();
+  //    for (int i = 0; i < NUM_LAUGH + NUM_RED; i++) {
+  //      // Set the i'th led to red
+  //      if (random(100) < 5) {
+  //        leds[i] = CHSV(0, 0, 0);
+  //      }
+  //    }
+  //    FastLED.show();
+  //  }
 }
