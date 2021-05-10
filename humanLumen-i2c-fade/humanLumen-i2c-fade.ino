@@ -38,7 +38,7 @@ int laughPeak = 0;
 #define SDCARD_MOSI_PIN  7
 #define SDCARD_SCK_PIN   14
 
-int fadeOnTime = 4000;
+int fadeOnTime = 1000;
 int fadeOffTime = 4000;
 unsigned long printTimer = 0;
 //unsigned long laughTimer = 0;
@@ -194,7 +194,7 @@ void loop() {
   bool printer = false;
   if (millis() > printTimer) {
     Serial.print("f1: "); Serial.println(fader1.fadeLevel);
-    Serial.println(fader2.fadeLevel);
+    Serial.print("f2: ");Serial.println(fader2.fadeLevel);
     printTimer = millis() + 500;
     printer = true;
   }
